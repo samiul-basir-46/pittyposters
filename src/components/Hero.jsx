@@ -1,11 +1,13 @@
+import { useData } from '../store/store'
 import { ArrowIcon } from './Icons'
 
 export default function Hero() {
+  const { content: c } = useData()
   return (
     <section id="top" className="hero">
       <div className="hero-stage" data-glow>
         <div className="hero-ghost" aria-hidden="true">
-          POSTERS
+          {c.heroGhost}
         </div>
 
         <div className="hero-inner">
@@ -37,20 +39,20 @@ export default function Hero() {
 
           <div className="hero-text">
             <p className="hero-script pp-up" style={{ animationDelay: '2.4s' }}>
-              Prints for plain walls
+              {c.heroScript}
             </p>
             <h1 className="pp-up" style={{ animationDelay: '2.55s' }}>
-              Walls deserve better.
+              {c.heroTitle}
             </h1>
             <p className="hero-quote pp-up" style={{ animationDelay: '2.7s' }}>
-              Simple, bold posters you can pick in a minute and hang by the weekend. No clutter, just good prints.
+              {c.heroQuote}
             </p>
             <div className="hero-actions pp-up" style={{ animationDelay: '2.85s' }}>
               <a href="#shop" className="btn btn-light" data-magnetic>
-                Browse posters <ArrowIcon />
+                {c.heroCta1} <ArrowIcon />
               </a>
               <a href="#how" className="btn btn-ghost" data-magnetic>
-                How it works
+                {c.heroCta2}
               </a>
             </div>
           </div>

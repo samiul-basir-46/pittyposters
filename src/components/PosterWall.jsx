@@ -1,72 +1,46 @@
 import { useState } from 'react'
-import { CATEGORIES, POSTERS } from '../data'
+import { useData } from '../store/store'
+import { fromPrice, money } from '../utils'
+import PosterFace from './PosterFace'
 
-function PosterArt({ p }) {
-  switch (p.kind) {
-    case 'grid':
-      return (
-        <div className="art-grid" style={{ width: p.w }}>
-          <i style={{ background: p.c1 }} />
-          <i style={{ background: p.c2 }} />
-          <i style={{ background: p.c2 }} />
-          <i style={{ background: p.c1 }} />
-        </div>
-      )
-    case 'waves':
-      return (
-        <div className="art-waves" style={{ background: p.c1 }}>
-          <div style={{ background: p.c2 }}>
-            <div style={{ background: p.bg }} />
-          </div>
-        </div>
-      )
-    case 'bars':
-      return (
-        <div className="art-bars">
-          {['100%', '64%', '82%', '48%'].map((w) => (
-            <i key={w} style={{ width: w, background: p.c1 }} />
-          ))}
-        </div>
-      )
-    case 'ring':
-      return <div className="art-ring" style={{ width: p.w, borderColor: p.c1 }} />
-    default:
-      return (
-        <div className="art-shape-wrap" style={{ width: p.w }}>
-          <div className="art-shape" style={{ borderRadius: p.radius, background: p.c1 }} />
-          {p.dot && <span className="art-dot" style={{ background: p.c2 }} />}
-        </div>
-      )
-  }
-}
-
-function Card({ p, index, animate, onAdd }) {
+function Card({ p, index, animate, currency, onOpen }) {
+  const sold = p.status === 'soldout'
+  const multi = p.sizes.length > 1
   return (
     <div className={'card-wrap' + (animate ? ' card-in' : '')} style={{ '--i': index }}>
       <article className="card tilt" data-tilt>
-        <div className="poster" style={{ background: p.bg, color: p.fg }} data-cursor="View">
-          <div className="poster-tag">{p.tag}</div>
-          <div className="poster-art">
-            <PosterArt p={p} />
-          </div>
-          <div className="poster-word">{p.word}</div>
-        </div>
+        <button
+          type="button"
+          className="poster-btn"
+          data-cursor="View"
+          aria-label={`View ${p.title}`}
+          onClick={() => onOpen(p)}
+        >
+          <PosterFace p={p} badge={sold ? 'Sold out' : p.featured ? 'Popular' : ''} />
+        </button>
         <h3 className="card-name">{p.title}</h3>
         <p className="card-sub">
-          {p.cat} · A3 / A2 · ৳[PRICE]
+          {p.cat} · {p.sizes.map((s) => s.label).join(' / ')} · {multi ? 'from ' : ''}
+          {money(fromPrice(p), currency)}
         </p>
-        <button type="button" className="btn btn-solid btn-sm add-btn" onClick={onAdd} data-magnetic>
-          Add to cart
+        <button type="button" className="btn btn-solid btn-sm add-btn" disabled={sold} onClick={() => onOpen(p)} data-magnetic={sold ? undefined : ''}>
+          {sold ? 'Sold out' : 'Add to cart'}
         </button>
       </article>
     </div>
   )
 }
 
-export default function PosterWall({ onAdd }) {
+export default function PosterWall({ onOpen }) {
+  const { posters, categories, content, settings } = useData()
   const [filter, setFilter] = useState('All')
   const [animate, setAnimate] = useState(false)
-  const visible = POSTERS.filter((p) => filter === 'All' || p.cat === filter)
+
+  const shown = posters.filter((p) => p.status !== 'hidden')
+  const usedCats = categories.filter((c) => shown.some((p) => p.cat === c))
+  const chips = ['All', ...usedCats]
+  const active = chips.includes(filter) ? filter : 'All'
+  const visible = shown.filter((p) => active === 'All' || p.cat === active)
 
   const pick = (c) => {
     setAnimate(true)
@@ -76,31 +50,37 @@ export default function PosterWall({ onAdd }) {
   return (
     <section id="shop" className="wall">
       <div className="container">
-        <h2 className="script-title reveal">The poster wall</h2>
+        <h2 className="script-title reveal">{content.wallTitle}</h2>
         <p className="section-sub reveal" style={{ '--d': '.08s' }}>
-          Pick a style, find your favourite.
+          {content.wallSub}
         </p>
 
-        <div className="chips reveal" style={{ '--d': '.14s' }} role="group" aria-label="Filter posters">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={'chip' + (c === filter ? ' on' : '')}
-              aria-pressed={c === filter}
-              onClick={() => pick(c)}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-
-        <div className="reveal" style={{ '--d': '.2s' }}>
-          <div className="grid" key={filter}>
-            {visible.map((p, i) => (
-              <Card key={p.id} p={p} index={i} animate={animate} onAdd={() => onAdd(p.title)} />
+        {chips.length > 2 && (
+          <div className="chips reveal" style={{ '--d': '.14s' }} role="group" aria-label="Filter posters">
+            {chips.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={'chip' + (c === active ? ' on' : '')}
+                aria-pressed={c === active}
+                onClick={() => pick(c)}
+              >
+                {c}
+              </button>
             ))}
           </div>
+        )}
+
+        <div className="reveal" style={{ '--d': '.2s' }}>
+          {visible.length === 0 ? (
+            <p className="wall-empty">New posters are coming soon. Check back shortly.</p>
+          ) : (
+            <div className="grid" key={active}>
+              {visible.map((p, i) => (
+                <Card key={p.id} p={p} index={i} animate={animate} currency={settings.currency} onOpen={onOpen} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>

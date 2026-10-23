@@ -1,16 +1,39 @@
-# React + Vite
+# Pitty Posters
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A simple, responsive poster shop built with React + Vite.
 
-Currently, two official plugins are available:
+```bash
+npm install
+npm run dev      # start locally
+npm run build    # production build
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Admin dashboard
 
-## React Compiler
+Open `/#/admin` (for example `http://localhost:5173/#/admin`).
+The default password is `pitty123`. **Change it first** in Admin → Settings.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+From the dashboard you can manage:
 
-## Expanding the Oxlint configuration
+- **Posters**: add, edit, duplicate, delete; sizes and prices; photo upload or generated design; on sale / sold out / hidden
+- **Categories**: these become the filter buttons on the website
+- **Orders**: see orders from the website, add orders by hand, update status (pending → confirmed → shipped → delivered / cancelled)
+- **Site content**: every heading, paragraph, step and contact line on the website
+- **Settings**: shop name, currency, delivery charge, WhatsApp number, password, backup and restore
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### Customers and orders
+
+The cart and checkout work on the website. When a customer places an order, a ready-made
+order message opens in WhatsApp (to the number set in Settings) and the order is saved.
+
+### Where the data lives
+
+All data is saved in the browser's `localStorage` (see `src/store/store.js`), so it lives on
+the device and browser where the admin works. That means:
+
+- orders placed on a customer's phone do **not** appear in your admin automatically; they reach you through the WhatsApp message
+- use **Settings → Download backup** regularly, and to move the shop to another device
+- the admin password only keeps casual visitors out. It is not real server security
+
+To sync data across devices and receive customer orders directly in the dashboard, replace the
+functions in `src/store/store.js` with a backend such as Firebase. Nothing else needs to change.

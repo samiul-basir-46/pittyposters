@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
-import { NAV_LINKS } from '../data'
+import { useCart } from '../store/store'
 import { CartIcon, CloseIcon, HeartLogo, MenuIcon } from './Icons'
 
-export default function Header({ count }) {
+const NAV_LINKS = [
+  { href: '#shop', label: 'Shop' },
+  { href: '#how', label: 'How it works' },
+  { href: '#about', label: 'About' },
+  { href: '#contact', label: 'Contact' },
+]
+
+export default function Header({ onCart }) {
   const [open, setOpen] = useState(false)
+  const count = useCart().reduce((n, l) => n + l.qty, 0)
 
   useEffect(() => {
     if (!open) return undefined
@@ -41,7 +49,7 @@ export default function Header({ count }) {
         </a>
 
         <div className="header-right">
-          <button type="button" className="cart-link" aria-label={`Cart, ${count} items`} data-magnetic>
+          <button type="button" className="cart-link" aria-label={`Cart, ${count} items`} onClick={onCart} data-magnetic>
             <CartIcon />
             {count > 0 && (
               <span key={count} className="cart-badge">

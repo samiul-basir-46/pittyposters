@@ -1,13 +1,13 @@
+import { useData } from '../store/store'
+
 export default function About() {
+  const { content } = useData()
   return (
     <section id="about" className="about" data-glow>
       <div className="about-inner">
         <div className="about-text reveal">
-          <h2 className="script-title">Small shop, big prints</h2>
-          <p className="about-quote">
-            “Pitty Posters is a simple place to find posters that make a room feel like yours. [Write your own story
-            here in two or three lines.]”
-          </p>
+          <h2 className="script-title">{content.aboutTitle}</h2>
+          <p className="about-quote">“{content.aboutText}”</p>
         </div>
         <div className="about-art reveal" style={{ '--d': '.15s' }} aria-hidden="true">
           <div data-depth="14" className="aa-wrap">

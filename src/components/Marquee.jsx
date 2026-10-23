@@ -1,7 +1,10 @@
-import { MARQUEE } from '../data'
+import { useData } from '../store/store'
 
 export default function Marquee() {
-  const items = [...MARQUEE, ...MARQUEE, ...MARQUEE, ...MARQUEE]
+  const { content } = useData()
+  const base = content.marquee.filter(Boolean)
+  if (!base.length) return null
+  const items = [...base, ...base, ...base, ...base]
   return (
     <div className="marquee" aria-hidden="true">
       <div className="marquee-track">
