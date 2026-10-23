@@ -1611,3 +1611,155 @@ html.cursor-on .cursor-ring {
 .toast {
   z-index: 140;
 }
+
+/* =========================================================
+   Customer account
+   ========================================================= */
+.acct-link {
+  margin-right: 0;
+}
+.header-right {
+  gap: 2px;
+}
+.acct-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bloom);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+}
+.acct-avatar.lg {
+  width: 56px;
+  height: 56px;
+  font-size: 24px;
+  font-family: var(--font-serif);
+  flex: none;
+}
+.acct-hint {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--cream);
+  border: 1px solid var(--sand);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--warm);
+}
+.link-btn.inline {
+  display: inline;
+  padding: 0;
+  font-size: inherit;
+  color: var(--brand);
+}
+.acc-modal {
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+}
+.acc-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 64px 4px 22px;
+}
+.acc-head h2 {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--brand);
+  overflow-wrap: anywhere;
+}
+.acc-head p {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--warm);
+  overflow-wrap: anywhere;
+}
+.acc-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 16px 22px 0;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--sand);
+}
+.acc-tabs button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--warm);
+  transition: background-color 0.2s, color 0.2s;
+}
+.acc-tabs button.on {
+  background: #fff;
+  color: var(--brand);
+  box-shadow: 0 2px 8px rgba(81, 46, 48, 0.15);
+}
+.acc-body {
+  padding: 18px 22px 8px;
+}
+.acc-submit {
+  margin-top: 6px;
+}
+.acc-pw {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--sand);
+}
+.acc-pw h3 {
+  margin-bottom: 12px;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  color: var(--brand);
+}
+.acc-foot {
+  padding: 8px 22px 22px;
+}
+.acc-empty {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--warm);
+}
+.acc-orders {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.acc-order {
+  padding: 14px;
+  border: 1px solid var(--sand);
+  border-radius: 14px;
+  background: var(--cream);
+}
+.acc-order ul {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--warm);
+}
+.acc-order-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.acc-order-date {
+  font-size: 12.5px;
+  color: var(--warm);
+}
+.acc-order-total {
+  text-align: right;
+  color: var(--warm);
+}
+.acc-order-total b {
+  color: var(--brand);
+}

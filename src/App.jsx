@@ -11,6 +11,7 @@ import About from './components/About'
 import Footer from './components/Footer'
 import ProductModal from './components/ProductModal'
 import CartDrawer from './components/CartDrawer'
+import AccountModal from './components/AccountModal'
 import AdminApp from './admin/AdminApp'
 import { useData } from './store/store'
 
@@ -18,6 +19,7 @@ function Site() {
   const { settings } = useData()
   const [product, setProduct] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
+  const [account, setAccount] = useState(null) // null | 'login' | 'signup' | 'profile'
   const [toast, setToast] = useState('')
   const timer = useRef(0)
 
@@ -35,7 +37,7 @@ function Site() {
     <>
       <Intro />
       <FX />
-      <Header onCart={() => setCartOpen(true)} />
+      <Header onCart={() => setCartOpen(true)} onAccount={() => setAccount('login')} />
       <main>
         <Hero />
         <Marquee />
@@ -45,7 +47,16 @@ function Site() {
       </main>
       <Footer />
       {live && <ProductModal poster={live} currency={settings.currency} onClose={() => setProduct(null)} onAdded={notify} />}
-      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+      {cartOpen && (
+        <CartDrawer
+          onClose={() => setCartOpen(false)}
+          onLogin={() => {
+            setCartOpen(false)
+            setAccount('login')
+          }}
+        />
+      )}
+      {account && <AccountModal initialTab={account} onClose={() => setAccount(null)} onNotify={notify} />}
       <div className={'toast' + (toast ? ' show' : '')} role="status" aria-live="polite">
         {toast}
       </div>

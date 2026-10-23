@@ -20,6 +20,7 @@ export function defaultData() {
       { id: 'petal', title: 'Petal Room', cat: 'Nature', tag: 'No. 08', word: 'Petal', status: 'active', featured: false, desc: '', image: null, sizes: sizes(350, 600), bg: '#3a2022', fg: '#f0e4e7', kind: 'shape', c1: '#d3a6ea', c2: '#d3a6ea', w: '56%', radius: '50% 0 50% 0', dot: false },
     ],
     orders: [],
+    users: [],
     content: {
       heroScript: 'Prints for plain walls',
       heroTitle: 'Walls deserve better.',

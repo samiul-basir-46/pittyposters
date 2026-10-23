@@ -9,6 +9,7 @@ import Dashboard from './Dashboard'
 import PostersAdmin from './PostersAdmin'
 import CategoriesAdmin from './CategoriesAdmin'
 import OrdersAdmin from './OrdersAdmin'
+import CustomersAdmin from './CustomersAdmin'
 import ContentAdmin from './ContentAdmin'
 import SettingsAdmin from './SettingsAdmin'
 
@@ -19,6 +20,7 @@ const NAV = [
   { to: '#/admin/posters', label: 'Posters', page: PostersAdmin },
   { to: '#/admin/categories', label: 'Categories', page: CategoriesAdmin },
   { to: '#/admin/orders', label: 'Orders', page: OrdersAdmin },
+  { to: '#/admin/customers', label: 'Customers', page: CustomersAdmin },
   { to: '#/admin/content', label: 'Site content', page: ContentAdmin },
   { to: '#/admin/settings', label: 'Settings', page: SettingsAdmin },
 ]

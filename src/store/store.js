@@ -10,6 +10,7 @@ import { uid } from '../utils'
 
 const KEY = 'pp:data:v1'
 const CART_KEY = 'pp:cart:v1'
+const SESSION_KEY = 'pp:session:v1'
 
 const read = (key) => {
   try {
@@ -39,11 +40,19 @@ function merge(saved) {
     categories: Array.isArray(d.categories) ? d.categories : base.categories,
     posters: Array.isArray(d.posters) ? d.posters : base.posters,
     orders: Array.isArray(d.orders) ? d.orders : [],
+    users: Array.isArray(d.users) ? d.users : [],
   }
 }
 
 let state = merge(read(KEY))
 let cart = Array.isArray(read(CART_KEY)) ? read(CART_KEY) : []
+let session = (() => {
+  try {
+    return localStorage.getItem(SESSION_KEY)
+  } catch {
+    return null
+  }
+})()
 const listeners = new Set()
 const emit = () => listeners.forEach((l) => l())
 
@@ -60,6 +69,9 @@ if (typeof window !== 'undefined') {
       emit()
     } else if (e.key === CART_KEY) {
       cart = Array.isArray(read(CART_KEY)) ? read(CART_KEY) : []
+      emit()
+    } else if (e.key === SESSION_KEY) {
+      session = e.newValue
       emit()
     }
   })
@@ -80,6 +92,32 @@ function commitCart(next) {
 
 export const useData = () => useSyncExternalStore(subscribe, () => state)
 export const useCart = () => useSyncExternalStore(subscribe, () => cart)
+export const getData = () => state
+
+/* ---------- customer accounts ---------- */
+const useSessionId = () => useSyncExternalStore(subscribe, () => session)
+// the logged-in customer, or null
+export function useUser() {
+  const { users } = useData()
+  const id = useSessionId()
+  return (id && users.find((u) => u.id === id)) || null
+}
+export function setSession(id) {
+  session = id || null
+  try {
+    if (id) localStorage.setItem(SESSION_KEY, id)
+    else localStorage.removeItem(SESSION_KEY)
+  } catch {
+    /* private mode: login lasts until the page closes */
+  }
+  emit()
+}
+export const addUser = (user) => commit({ ...state, users: [...state.users, user] })
+export const patchUser = (id, patch) => commit({ ...state, users: state.users.map((u) => (u.id === id ? { ...u, ...patch } : u)) })
+export function removeUser(id) {
+  if (session === id) setSession(null)
+  return commit({ ...state, users: state.users.filter((u) => u.id !== id) })
+}
 
 /* ---------- posters ---------- */
 export function savePoster(poster) {
@@ -120,13 +158,14 @@ export function deleteCategory(name) {
 }
 
 /* ---------- orders ---------- */
-export function createOrder({ customer, note = '', items, delivery, source = 'web', status = 'pending' }) {
+export function createOrder({ customer, note = '', items, delivery, source = 'web', status = 'pending', userId = null }) {
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0)
   const order = {
     id: 'PP-' + state.nextOrder,
     createdAt: new Date().toISOString(),
     status,
     source,
+    userId,
     customer,
     note,
     items,

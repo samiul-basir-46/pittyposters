@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { clearCart, createOrder, removeFromCart, resolveCart, setCartQty, useCart, useData } from '../store/store'
+import { clearCart, createOrder, removeFromCart, resolveCart, setCartQty, useCart, useData, useUser } from '../store/store'
 import { money, waNumber } from '../utils'
 import PosterFace from './PosterFace'
 import { CloseIcon } from './Icons'
@@ -24,12 +24,13 @@ function whatsappText(order, currency, storeName) {
     .join('\n')
 }
 
-export default function CartDrawer({ onClose }) {
+export default function CartDrawer({ onClose, onLogin }) {
   const { posters, settings } = useData()
+  const user = useUser()
   const lines = resolveCart(useCart(), posters)
   const { currency, deliveryCharge, whatsapp, storeName } = settings
   const [step, setStep] = useState('cart') // cart | checkout | done
-  const [form, setForm] = useState({ name: '', phone: '', address: '', note: '' })
+  const [form, setForm] = useState({ name: user?.name || '', phone: user?.phone || '', address: user?.address || '', note: '' })
   const [error, setError] = useState('')
   const [placed, setPlaced] = useState(null)
   const closeRef = useRef(null)
@@ -61,6 +62,7 @@ export default function CartDrawer({ onClose }) {
     const order = createOrder({
       customer: { name: form.name.trim(), phone: form.phone.trim(), address: form.address.trim() },
       note: form.note.trim(),
+      userId: user?.id || null,
       delivery,
       items: lines.map((l) => ({ posterId: l.posterId, title: l.poster.title, size: l.size, price: l.price, qty: l.qty })),
     })
@@ -175,6 +177,19 @@ export default function CartDrawer({ onClose }) {
         {step === 'checkout' && lines.length > 0 && (
           <form className="drawer-form" onSubmit={submit} noValidate>
             <div className="drawer-body">
+              {user ? (
+                <p className="acct-hint">
+                  Ordering as <b>{user.name}</b>. This order will show in your account.
+                </p>
+              ) : (
+                <p className="acct-hint">
+                  Have an account?{' '}
+                  <button type="button" className="link-btn inline" onClick={onLogin}>
+                    Log in
+                  </button>{' '}
+                  to fill this in and track your orders. Or just continue as a guest.
+                </p>
+              )}
               <label className="f">
                 <span>Full name</span>
                 <input value={form.name} onChange={set('name')} autoComplete="name" required />

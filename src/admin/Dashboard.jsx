@@ -7,7 +7,7 @@ const dateFmt = (iso) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 export default function Dashboard() {
-  const { posters, orders, categories, settings } = useData()
+  const { posters, orders, users, settings } = useData()
   const cur = settings.currency
 
   const live = orders.filter((o) => o.status !== 'cancelled')
@@ -58,10 +58,10 @@ export default function Dashboard() {
           <small>{active} on sale</small>
         </div>
         <div className="a-stat">
-          <span>Categories</span>
-          <b>{categories.length}</b>
+          <span>Customers</span>
+          <b>{users.length}</b>
           <small>
-            <a href="#/admin/categories">Manage</a>
+            <a href="#/admin/customers">View all</a>
           </small>
         </div>
       </div>

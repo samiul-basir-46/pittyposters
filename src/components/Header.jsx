@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useCart } from '../store/store'
-import { CartIcon, CloseIcon, HeartLogo, MenuIcon } from './Icons'
+import { useCart, useUser } from '../store/store'
+import { CartIcon, CloseIcon, HeartLogo, MenuIcon, UserIcon } from './Icons'
 
 const NAV_LINKS = [
   { href: '#shop', label: 'Shop' },
@@ -9,9 +9,10 @@ const NAV_LINKS = [
   { href: '#contact', label: 'Contact' },
 ]
 
-export default function Header({ onCart }) {
+export default function Header({ onCart, onAccount }) {
   const [open, setOpen] = useState(false)
   const count = useCart().reduce((n, l) => n + l.qty, 0)
+  const user = useUser()
 
   useEffect(() => {
     if (!open) return undefined
@@ -49,6 +50,15 @@ export default function Header({ onCart }) {
         </a>
 
         <div className="header-right">
+          <button
+            type="button"
+            className="cart-link acct-link"
+            aria-label={user ? `My account, ${user.name}` : 'Log in or sign up'}
+            onClick={onAccount}
+            data-magnetic
+          >
+            {user ? <span className="acct-avatar">{user.name.trim()[0].toUpperCase()}</span> : <UserIcon />}
+          </button>
           <button type="button" className="cart-link" aria-label={`Cart, ${count} items`} onClick={onCart} data-magnetic>
             <CartIcon />
             {count > 0 && (

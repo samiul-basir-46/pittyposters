@@ -18,6 +18,13 @@ export const CartIcon = () => (
   </svg>
 )
 
+export const UserIcon = () => (
+  <svg {...base}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4.5 20.5c.8-3.7 3.8-5.5 7.5-5.5s6.7 1.8 7.5 5.5" />
+  </svg>
+)
+
 export const MenuIcon = () => (
   <svg {...base}>
     <path d="M4 7h16M4 12h16M4 17h16" />

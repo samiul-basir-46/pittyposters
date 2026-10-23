@@ -56,3 +56,10 @@ export const fromPrice = (poster) => {
   const prices = (poster.sizes || []).map((s) => Number(s.price) || 0)
   return prices.length ? Math.min(...prices) : 0
 }
+
+// 01712-345678, +8801712345678 and 8801712345678 all become 01712345678
+export function normPhone(raw) {
+  let d = String(raw || '').replace(/\D/g, '')
+  if (d.startsWith('880')) d = '0' + d.slice(3)
+  return d
+}

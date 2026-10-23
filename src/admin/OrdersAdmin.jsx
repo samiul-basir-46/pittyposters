@@ -44,7 +44,7 @@ function OrderDetail({ id, onClose }) {
       <div className="a-detail">
         <div className="a-detail-top">
           <span className="a-muted">
-            {dateFmt(o.createdAt)} · {o.source === 'manual' ? 'Added by hand' : 'From website'}
+            {dateFmt(o.createdAt)} · {o.source === 'manual' ? 'Added by hand' : 'From website'} · {o.userId ? 'Has account' : 'Guest'}
           </span>
           <select
             aria-label="Order status"
