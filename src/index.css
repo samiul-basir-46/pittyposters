@@ -1,46 +1,88 @@
 :root {
-  --bg: #fcefee;
-  --accent: #e16191;
-  --accent-deep: #a8325f;
-  --ink: #2b1620;
-  --muted: #6b4a58;
-  --rose: #f4a7c0;
-  --blush: #f7c9d4;
-  --pink-soft: #efb5c8;
-  --berry: #8e2f55;
-  --plum: #5a1f3c;
-  --white: #ffffff;
-  --font-display: 'Bricolage Grotesque', sans-serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
+  /* PittyBloom theme */
+  --brand: #512e30;
+  --brand-dark: #3a2022;
+  --accent: #d3a6ea;
+  --heart: #b3202a;
+  --cream: #fbf6f7;
+  --sand: #f0e4e7;
+  --mist: #d9cdd3;
+  --ink: #2a1a1c;
+  --warm: #6b3f45;
+  /* logo pinks */
+  --bloom: #e16191;
+  --blush: #fcefee;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Crimson Text', Georgia, serif;
+  --font-script: 'Great Vibes', cursive;
+  --font-display: 'Amatic SC', cursive;
+  --font-quote: 'Lora', Georgia, serif;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: #fff;
   color: var(--ink);
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
 }
 
 a {
-  color: var(--ink);
+  color: inherit;
   text-decoration: none;
 }
 
-a:hover {
-  color: var(--accent-deep);
-}
-
 button {
-  font-family: var(--font-body);
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
   cursor: pointer;
 }
 
-button:focus-visible,
-a:focus-visible {
-  outline: 3px solid var(--ink);
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+section[id] {
+  scroll-margin-top: 72px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--brand-dark);
+}
+
+:focus-visible {
+  outline: 3px solid var(--bloom);
   outline-offset: 3px;
+}
+
+/* hide the native cursor only once the custom one is running */
+html.cursor-on,
+html.cursor-on * {
+  cursor: none !important;
 }

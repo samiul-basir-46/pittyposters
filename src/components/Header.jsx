@@ -1,0 +1,68 @@
+import { useEffect, useState } from 'react'
+import { NAV_LINKS } from '../data'
+import { CartIcon, CloseIcon, HeartLogo, MenuIcon } from './Icons'
+
+export default function Header({ count }) {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return undefined
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
+  return (
+    <header className="site-header">
+      <div className="container header-row">
+        <nav className="nav-desktop" aria-label="Main navigation">
+          {NAV_LINKS.map((l) => (
+            <a key={l.href} href={l.href} className="nav-link">
+              {l.label}
+            </a>
+          ))}
+        </nav>
+
+        <button
+          type="button"
+          className="menu-btn"
+          aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={open}
+          aria-controls="mobile-nav"
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? <CloseIcon /> : <MenuIcon />}
+        </button>
+
+        <a href="#top" className="logo-badge" aria-label="Pitty Posters" data-magnetic>
+          <HeartLogo />
+        </a>
+
+        <div className="header-right">
+          <button type="button" className="cart-link" aria-label={`Cart, ${count} items`} data-magnetic>
+            <CartIcon />
+            {count > 0 && (
+              <span key={count} className="cart-badge">
+                {count}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {open && (
+        <div id="mobile-nav" className="mobile-nav">
+          <nav aria-label="Mobile navigation">
+            {NAV_LINKS.map((l) => (
+              <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
+                {l.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      )}
+    </header>
+  )
+}
