@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useData, useUser } from '../store/store'
-import { changePassword, logIn, logOut, signUp, updateProfile } from '../store/auth'
+import { logOut, renderGoogleSignIn, updateProfile } from '../store/auth'
 import { money } from '../utils'
 import { CloseIcon } from './Icons'
 
@@ -14,84 +14,28 @@ function Err({ text }) {
   ) : null
 }
 
-function LoginForm({ onDone }) {
-  const [v, setV] = useState({ id: '', pw: '' })
+function GoogleLogin({ onDone }) {
+  const buttonRef = useRef(null)
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-  const submit = async (e) => {
-    e.preventDefault()
-    setBusy(true)
-    const r = await logIn(v.id, v.pw)
-    setBusy(false)
-    if (r.error) setError(r.error)
-    else onDone(`Welcome back, ${r.user.name.split(' ')[0]}!`)
-  }
+  useEffect(() => {
+    let cleanup = () => {}
+    renderGoogleSignIn(buttonRef.current, (user) => onDone(`Welcome, ${user.name.split(' ')[0]}!`), setError).then((cancel) => {
+      cleanup = cancel
+    })
+    return () => cleanup()
+  }, [onDone])
   return (
-    <form onSubmit={submit} noValidate>
-      <label className="f">
-        <span>Phone number or email</span>
-        <input value={v.id} onChange={(e) => setV({ ...v, id: e.target.value })} autoComplete="username" autoFocus />
-      </label>
-      <label className="f">
-        <span>Password</span>
-        <input type="password" value={v.pw} onChange={(e) => setV({ ...v, pw: e.target.value })} autoComplete="current-password" />
-      </label>
+    <div>
+      <div ref={buttonRef} className="google-login-button" />
       <Err text={error} />
-      <button type="submit" className="btn btn-solid full acc-submit" disabled={busy}>
-        {busy ? 'Checking…' : 'Log in'}
-      </button>
-    </form>
-  )
-}
-
-function SignupForm({ onDone }) {
-  const [v, setV] = useState({ name: '', phone: '', email: '', address: '', password: '' })
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-  const set = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.value }))
-  const submit = async (e) => {
-    e.preventDefault()
-    setBusy(true)
-    const r = await signUp(v)
-    setBusy(false)
-    if (r.error) setError(r.error)
-    else onDone(`Welcome, ${r.user.name.split(' ')[0]}! Your account is ready.`)
-  }
-  return (
-    <form onSubmit={submit} noValidate>
-      <label className="f">
-        <span>Full name</span>
-        <input value={v.name} onChange={set('name')} autoComplete="name" autoFocus />
-      </label>
-      <label className="f">
-        <span>Phone number</span>
-        <input value={v.phone} onChange={set('phone')} inputMode="tel" autoComplete="tel" placeholder="01XXXXXXXXX" />
-      </label>
-      <label className="f">
-        <span>Email (optional)</span>
-        <input type="email" value={v.email} onChange={set('email')} autoComplete="email" />
-      </label>
-      <label className="f">
-        <span>Delivery address (optional)</span>
-        <textarea rows={2} value={v.address} onChange={set('address')} autoComplete="street-address" />
-      </label>
-      <label className="f">
-        <span>Password (6+ characters)</span>
-        <input type="password" value={v.password} onChange={set('password')} autoComplete="new-password" />
-      </label>
-      <Err text={error} />
-      <button type="submit" className="btn btn-solid full acc-submit" disabled={busy}>
-        {busy ? 'Creating…' : 'Create account'}
-      </button>
-    </form>
+      <p className="acct-hint">Use your Google account to log in or create your account.</p>
+    </div>
   )
 }
 
 function Profile({ user, onNotify }) {
   const [v, setV] = useState({ name: user.name, phone: user.phone, email: user.email, address: user.address })
-  const [pw, setPw] = useState({ cur: '', next: '' })
   const [error, setError] = useState('')
-  const [pwError, setPwError] = useState('')
   const set = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.value }))
 
   const save = (e) => {
@@ -101,15 +45,6 @@ function Profile({ user, onNotify }) {
     setError('')
     onNotify('Profile saved')
   }
-  const savePw = async (e) => {
-    e.preventDefault()
-    const r = await changePassword(user, pw.cur, pw.next)
-    if (r.error) return setPwError(r.error)
-    setPwError('')
-    setPw({ cur: '', next: '' })
-    onNotify('Password changed')
-  }
-
   return (
     <>
       <form onSubmit={save} noValidate>
@@ -132,22 +67,6 @@ function Profile({ user, onNotify }) {
         <Err text={error} />
         <button type="submit" className="btn btn-solid full acc-submit">
           Save profile
-        </button>
-      </form>
-
-      <form onSubmit={savePw} noValidate className="acc-pw">
-        <h3>Change password</h3>
-        <label className="f">
-          <span>Current password</span>
-          <input type="password" value={pw.cur} onChange={(e) => setPw({ ...pw, cur: e.target.value })} autoComplete="current-password" />
-        </label>
-        <label className="f">
-          <span>New password</span>
-          <input type="password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} autoComplete="new-password" />
-        </label>
-        <Err text={pwError} />
-        <button type="submit" className="btn btn-outline full">
-          Change password
         </button>
       </form>
     </>
@@ -192,7 +111,7 @@ function Orders({ user, currency }) {
 export default function AccountModal({ initialTab, onClose, onNotify }) {
   const user = useUser()
   const { settings } = useData()
-  const [tab, setTab] = useState(initialTab === 'signup' ? 'signup' : 'login')
+  const [tab, setTab] = useState(initialTab === 'orders' ? 'orders' : 'login')
   const closeRef = useRef(null)
 
   useEffect(() => {
@@ -217,10 +136,7 @@ export default function AccountModal({ initialTab, onClose, onNotify }) {
         ['profile', 'Profile'],
         ['orders', 'My orders'],
       ]
-    : [
-        ['login', 'Log in'],
-        ['signup', 'Sign up'],
-      ]
+    : [['login', 'Log in']]
 
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -240,8 +156,8 @@ export default function AccountModal({ initialTab, onClose, onNotify }) {
             </>
           ) : (
             <div>
-              <h2>{view === 'signup' ? 'Create your account' : 'Welcome back'}</h2>
-              <p>{view === 'signup' ? 'Save your details and track your orders.' : 'Log in to see your orders and check out faster.'}</p>
+              <h2>Welcome</h2>
+              <p>Log in with Google to see your orders and check out faster.</p>
             </div>
           )}
         </div>
@@ -255,8 +171,7 @@ export default function AccountModal({ initialTab, onClose, onNotify }) {
         </div>
 
         <div className="acc-body">
-          {view === 'login' && <LoginForm onDone={done} />}
-          {view === 'signup' && <SignupForm onDone={done} />}
+          {view === 'login' && <GoogleLogin onDone={done} />}
           {view === 'profile' && user && <Profile key={user.id + user.name} user={user} onNotify={onNotify} />}
           {view === 'orders' && user && <Orders user={user} currency={settings.currency} />}
         </div>

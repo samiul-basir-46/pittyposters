@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { removeUser, useData } from '../store/store'
-import { resetPassword } from '../store/auth'
 import { money } from '../utils'
 import { Badge, Empty, Modal, PageHead } from './ui'
 import { useNotify } from './notify'
@@ -15,13 +14,6 @@ function CustomerDetail({ id, onClose }) {
   const mine = orders.filter((o) => o.userId === u.id)
   const spent = mine.filter((o) => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0)
 
-  const reset = async () => {
-    const next = window.prompt(`Set a new password for ${u.name} (at least 6 characters). Tell them the new password, they can change it in their profile.`)
-    if (next === null) return
-    const r = await resetPassword(u.id, next)
-    if (r.error) notify(r.error, 'error')
-    else notify('Password reset')
-  }
   const remove = () => {
     if (window.confirm(`Delete ${u.name}'s account? Their past orders stay in your Orders list.`)) {
       removeUser(u.id)
@@ -35,30 +27,29 @@ function CustomerDetail({ id, onClose }) {
       title={u.name}
       onClose={onClose}
       footer={
-        <>
-          <button type="button" className="a-btn danger" onClick={remove}>
-            Delete account
-          </button>
-          <button type="button" className="a-btn" onClick={reset}>
-            Reset password
-          </button>
-        </>
+    <button type="button" className="a-btn danger" onClick={remove}>
+      Delete account
+    </button>
       }
     >
       <div className="a-detail">
         <section>
           <h3>Contact</h3>
-          <p>{u.phone}</p>
+          {u.phone ? <p>{u.phone}</p> : <p className="a-muted">Phone not added</p>}
           {u.email && <p>{u.email}</p>}
           {u.address && <p>{u.address}</p>}
           <p className="a-muted">Joined {dateFmt(u.createdAt)}</p>
           <p className="a-contact">
-            <a className="a-btn sm" href={`tel:${u.phone}`}>
-              Call
-            </a>
-            <a className="a-btn sm" href={`https://wa.me/88${u.phone}`} target="_blank" rel="noreferrer">
-              WhatsApp
-            </a>
+            {u.phone && (
+              <>
+                <a className="a-btn sm" href={`tel:${u.phone}`}>
+                  Call
+                </a>
+                <a className="a-btn sm" href={`https://wa.me/88${u.phone}`} target="_blank" rel="noreferrer">
+                  WhatsApp
+                </a>
+              </>
+            )}
           </p>
         </section>
         <section>
