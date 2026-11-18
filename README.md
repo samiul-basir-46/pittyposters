@@ -10,8 +10,14 @@ npm run build    # production build
 
 ## Admin dashboard
 
-Open `/#/admin` (for example `http://localhost:5173/#/admin`).
+Open `/admin` (for example `http://localhost:5173/admin`).
 The default password is `pitty123`. **Change it first** in Admin → Settings.
+
+### Steadfast dispatch
+
+Admin order details can create Steadfast consignments and save tracking codes to customer orders. The UI calls the shared PittyBloom order-media Worker; its `APP_ORIGIN` must include the deployed Pitty Posters Firebase Hosting origin. The allowlist is updated in the PittyBloom repo's `workers/order-media/wrangler.toml`; redeploy that Worker for production dispatch from Pitty Posters. Keep the existing Steadfast API credentials configured as Worker secrets; they do not belong in the website.
+
+The shop uses direct paths for its sections and pages: `/shop`, `/how`, `/about`, `/contact`, `/cart`, `/account`, `/account/profile`, `/account/orders`, and `/poster/:id`. Admin sections use `/admin/:section`.
 
 From the dashboard you can manage:
 

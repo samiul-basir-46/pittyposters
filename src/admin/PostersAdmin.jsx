@@ -35,8 +35,9 @@ const blank = (categories, count) => ({
   desc: '',
   image: null,
   sizes: [
+    { label: 'A5', price: '' },
+    { label: 'A4', price: '' },
     { label: 'A3', price: '' },
-    { label: 'A2', price: '' },
   ],
   bg: '#512e30',
   fg: '#fbf6f7',
@@ -58,8 +59,6 @@ function PosterForm({ initial, isNew, onClose }) {
   const set = (k, v) => setP((x) => ({ ...x, [k]: v }))
 
   const setSize = (i, k, v) => setP((x) => ({ ...x, sizes: x.sizes.map((s, j) => (j === i ? { ...s, [k]: v } : s)) }))
-  const addSize = () => setP((x) => ({ ...x, sizes: [...x.sizes, { label: '', price: '' }] }))
-  const removeSize = (i) => setP((x) => ({ ...x, sizes: x.sizes.filter((_, j) => j !== i) }))
 
   const onImage = async (e) => {
     const file = e.target.files?.[0]
@@ -80,7 +79,7 @@ function PosterForm({ initial, isNew, onClose }) {
     if (!title) return setError('Please give the poster a name.')
     if (!p.cat) return setError('Please choose a category (add one in Categories first).')
     const sizes = p.sizes.map((s) => ({ label: s.label.trim(), price: Number(s.price) }))
-    if (!sizes.length) return setError('Add at least one size with a price.')
+    if (sizes.map((size) => size.label).join(',') !== 'A5,A4,A3') return setError('Poster sizes must be A5, A4 and A3.')
     if (sizes.some((s) => !s.label || !Number.isFinite(s.price) || s.price <= 0)) return setError('Every size needs a name and a price above 0.')
     if (new Set(sizes.map((s) => s.label.toLowerCase())).size !== sizes.length) return setError('Two sizes have the same name.')
     setError('')
@@ -146,7 +145,7 @@ function PosterForm({ initial, isNew, onClose }) {
             <span className="a-label">Sizes and prices ({settings.currency})</span>
             {p.sizes.map((s, i) => (
               <div className="a-size-row" key={i}>
-                <input aria-label="Size name" value={s.label} onChange={(e) => setSize(i, 'label', e.target.value)} placeholder="A3" />
+                <input aria-label="Size name" value={s.label} readOnly />
                 <input
                   aria-label="Price"
                   value={s.price}
@@ -154,14 +153,9 @@ function PosterForm({ initial, isNew, onClose }) {
                   inputMode="numeric"
                   placeholder="Price"
                 />
-                <button type="button" className="a-icon-btn" aria-label="Remove size" onClick={() => removeSize(i)} disabled={p.sizes.length === 1}>
-                  ×
-                </button>
+                <span aria-hidden="true" />
               </div>
             ))}
-            <button type="button" className="a-btn sm" onClick={addSize}>
-              + Add size
-            </button>
           </div>
 
           <Toggle checked={p.featured} onChange={(v) => set('featured', v)} label="Mark as popular" />
@@ -253,16 +247,16 @@ export default function PostersAdmin() {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
   const [editing, setEditing] = useState(null) // {poster, isNew}
+  const [deleting, setDeleting] = useState(null)
 
   const list = posters.filter(
     (p) => (cat === 'all' || p.cat === cat) && p.title.toLowerCase().includes(q.trim().toLowerCase()),
   )
 
-  const remove = (p) => {
-    if (window.confirm(`Delete "${p.title}"? This cannot be undone.`)) {
-      deletePoster(p.id)
-      notify('Poster deleted')
-    }
+  const remove = () => {
+    if (!deleting) return
+    saved(deletePoster(deleting.id), 'Poster deleted')
+    setDeleting(null)
   }
   const duplicate = (p) => {
     const copy = { ...p, id: newPosterId(), title: p.title + ' (copy)', sizes: p.sizes.map((s) => ({ ...s })) }
@@ -326,7 +320,7 @@ export default function PostersAdmin() {
                 <button type="button" className="a-btn sm" onClick={() => duplicate(p)}>
                   Duplicate
                 </button>
-                <button type="button" className="a-btn sm danger" onClick={() => remove(p)}>
+                <button type="button" className="a-btn sm danger" onClick={() => setDeleting(p)}>
                   Delete
                 </button>
               </div>
@@ -336,6 +330,20 @@ export default function PostersAdmin() {
       )}
 
       {editing && <PosterForm key={editing.poster.id} initial={editing.poster} isNew={editing.isNew} onClose={() => setEditing(null)} />}
+      {deleting && (
+        <Modal
+          title="Delete poster?"
+          onClose={() => setDeleting(null)}
+          footer={
+            <>
+              <button type="button" className="a-btn" onClick={() => setDeleting(null)}>Cancel</button>
+              <button type="button" className="a-btn danger" onClick={remove}>Delete poster</button>
+            </>
+          }
+        >
+          <p>Delete <b>{deleting.title}</b>? This cannot be undone. It will also be removed from customers’ carts.</p>
+        </Modal>
+      )}
     </>
   )
 }

@@ -29,16 +29,40 @@ const write = (key, value) => {
   }
 }
 
+const roundPosterPrice = (price) => Math.max(50, Math.round(Number(price || 0) / 50) * 50)
+function normalizePosterSizes(poster) {
+  if (poster?.productType === 'songbook') return poster
+  const oldSizes = Array.isArray(poster?.sizes) ? poster.sizes : []
+  const byLabel = new Map(oldSizes.map((size) => [String(size.label || '').trim().toUpperCase(), Number(size.price) || 0]))
+  const a3 = byLabel.get('A3') || (byLabel.get('A4') ? roundPosterPrice(byLabel.get('A4') / 0.72) : byLabel.get('A2') ? roundPosterPrice(byLabel.get('A2') * 0.6) : 350)
+  const a4 = byLabel.get('A4') || roundPosterPrice(a3 * 0.72)
+  const a5 = byLabel.get('A5') || roundPosterPrice(a4 * 0.6)
+  return { ...poster, sizes: [{ label: 'A5', price: a5 }, { label: 'A4', price: a4 }, { label: 'A3', price: a3 }] }
+}
+
 function merge(saved) {
   const base = defaultData()
   const d = saved && typeof saved === 'object' ? saved : {}
+  const deletedPosterIds = Array.isArray(d.deletedPosterIds) ? [...new Set(d.deletedPosterIds)] : []
+  const deletedPosterSet = new Set(deletedPosterIds)
   return {
     ...base,
     ...d,
     settings: { ...base.settings, ...(d.settings || {}) },
-    content: { ...base.content, ...(d.content || {}) },
-    categories: Array.isArray(d.categories) ? d.categories : base.categories,
-    posters: Array.isArray(d.posters) ? d.posters : base.posters,
+    content: {
+      ...base.content,
+      ...(d.content || {}),
+      steps: Array.isArray(d.content?.steps)
+        ? d.content.steps.map((step) => step.text === 'Every poster comes in A3 and A2. Pick the one that fits your wall.'
+          ? { ...step, text: 'Every poster comes in A5, A4 and A3. Pick the one that fits your wall.' }
+          : step)
+        : base.content.steps,
+    },
+    categories: Array.isArray(d.categories) ? [...new Set([...d.categories, ...base.categories.filter((c) => c === 'Song Books')])] : base.categories,
+    posters: Array.isArray(d.posters)
+      ? [...d.posters.map(normalizePosterSizes), ...base.posters.filter((p) => p.id === 'song-book' && !deletedPosterSet.has(p.id) && !d.posters.some((saved) => saved.id === p.id))]
+      : base.posters.filter((p) => !deletedPosterSet.has(p.id)),
+    deletedPosterIds,
     orders: Array.isArray(d.orders) ? d.orders : [],
     users: Array.isArray(d.users) ? d.users : [],
   }
@@ -46,6 +70,14 @@ function merge(saved) {
 
 let state = merge(read(KEY))
 let cart = Array.isArray(read(CART_KEY)) ? read(CART_KEY) : []
+const migratedCart = cart.map((line) => {
+  if (line.size !== 'A2' || !state.posters.some((poster) => poster.id === line.posterId && poster.productType !== 'songbook')) return line
+  return { ...line, size: 'A4', key: `${line.posterId}|A4` }
+})
+if (migratedCart.some((line, index) => line !== cart[index])) {
+  cart = migratedCart
+  write(CART_KEY, cart)
+}
 let session = (() => {
   try {
     return localStorage.getItem(SESSION_KEY)
@@ -125,11 +157,12 @@ export function savePoster(poster) {
   const posters = exists
     ? state.posters.map((p) => (p.id === poster.id ? poster : p))
     : [...state.posters, poster]
-  return commit({ ...state, posters })
+  return commit({ ...state, posters, deletedPosterIds: (state.deletedPosterIds || []).filter((id) => id !== poster.id) })
 }
 export function deletePoster(id) {
   commitCart(cart.filter((c) => c.posterId !== id))
-  return commit({ ...state, posters: state.posters.filter((p) => p.id !== id) })
+  const deletedPosterIds = [...new Set([...(state.deletedPosterIds || []), id])]
+  return commit({ ...state, posters: state.posters.filter((p) => p.id !== id), deletedPosterIds })
 }
 export function patchPoster(id, patch) {
   return commit({ ...state, posters: state.posters.map((p) => (p.id === id ? { ...p, ...patch } : p)) })
@@ -201,13 +234,13 @@ export function resetData() {
 
 /* ---------- cart ---------- */
 const lineKey = (posterId, size) => `${posterId}|${size}`
-export function addToCart(posterId, size, qty = 1) {
-  const key = lineKey(posterId, size)
+export function addToCart(posterId, size, qty = 1, details = null) {
+  const key = lineKey(posterId, size) + (details ? `|${uid()}` : '')
   const found = cart.find((c) => c.key === key)
   commitCart(
     found
       ? cart.map((c) => (c.key === key ? { ...c, qty: Math.min(20, c.qty + qty) } : c))
-      : [...cart, { key, posterId, size, qty }],
+      : [...cart, { key, posterId, size, qty, ...(details ? { details } : {}) }],
   )
 }
 export const setCartQty = (key, qty) =>

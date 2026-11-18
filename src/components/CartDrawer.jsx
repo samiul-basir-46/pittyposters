@@ -5,7 +5,10 @@ import PosterFace from './PosterFace'
 import { CloseIcon } from './Icons'
 
 function whatsappText(order, currency, storeName) {
-  const lines = order.items.map((i) => `• ${i.title} (${i.size}) × ${i.qty} = ${money(i.price * i.qty, currency)}`)
+  const lines = order.items.flatMap((i) => [
+    `• ${i.title} (${i.size}) × ${i.qty} = ${money(i.price * i.qty, currency)}`,
+    ...(i.details ? [`  Song: ${i.details.songName}`, `  Lyrics: ${i.details.lyrics}`] : []),
+  ])
   return [
     `New order ${order.id} · ${storeName}`,
     '',
@@ -24,7 +27,7 @@ function whatsappText(order, currency, storeName) {
     .join('\n')
 }
 
-export default function CartDrawer({ onClose, onLogin }) {
+export default function CartDrawer({ onClose, onLogin, page = false }) {
   const { posters, settings } = useData()
   const user = useUser()
   const lines = resolveCart(useCart(), posters)
@@ -41,15 +44,15 @@ export default function CartDrawer({ onClose, onLogin }) {
 
   useEffect(() => {
     const prev = document.documentElement.style.overflow
-    document.documentElement.style.overflow = 'hidden'
+    if (!page) document.documentElement.style.overflow = 'hidden'
     closeRef.current?.focus()
     const onKey = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => {
-      document.documentElement.style.overflow = prev
+      if (!page) document.documentElement.style.overflow = prev
       window.removeEventListener('keydown', onKey)
     }
-  }, [onClose])
+  }, [onClose, page])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -60,11 +63,11 @@ export default function CartDrawer({ onClose, onLogin }) {
     if (phoneDigits.length < 10) return setError('Please enter a valid phone number.')
     setError('')
     const order = createOrder({
-      customer: { name: form.name.trim(), phone: form.phone.trim(), address: form.address.trim() },
+      customer: { name: form.name.trim(), phone: form.phone.trim(), address: form.address.trim(), email: user?.email || '' },
       note: form.note.trim(),
       userId: user?.id || null,
       delivery,
-      items: lines.map((l) => ({ posterId: l.posterId, title: l.poster.title, size: l.size, price: l.price, qty: l.qty })),
+      items: lines.map((l) => ({ posterId: l.posterId, title: l.poster.title, size: l.size, price: l.price, qty: l.qty, ...(l.details ? { details: l.details } : {}) })),
     })
     clearCart()
     setPlaced(order)
@@ -72,9 +75,8 @@ export default function CartDrawer({ onClose, onLogin }) {
     if (wa) window.open(`https://wa.me/${wa}?text=${encodeURIComponent(whatsappText(order, currency, storeName))}`, '_blank', 'noopener')
   }
 
-  return (
-    <div className="overlay overlay-right" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Shopping cart">
+  const drawer = (
+      <aside className="drawer" role={page ? 'region' : 'dialog'} aria-modal={page ? undefined : 'true'} aria-label="Shopping cart">
         <div className="drawer-head">
           <h2>{step === 'done' ? 'Order placed' : step === 'checkout' ? 'Checkout' : 'Your cart'}</h2>
           <button ref={closeRef} type="button" className="modal-x static" aria-label="Close cart" onClick={onClose}>
@@ -135,6 +137,15 @@ export default function CartDrawer({ onClose, onLogin }) {
                     <p className="line-meta">
                       {l.size} · {money(l.price, currency)}
                     </p>
+                    {l.details && (
+                      <div className="line-song-details">
+                        <p><b>Song:</b> {l.details.songName}</p>
+                        <details>
+                          <summary>View lyrics</summary>
+                          <p>{l.details.lyrics}</p>
+                        </details>
+                      </div>
+                    )}
                     <div className="stepper sm">
                       <button type="button" aria-label="Decrease" onClick={() => setCartQty(l.key, l.qty - 1)}>
                         −
@@ -228,6 +239,13 @@ export default function CartDrawer({ onClose, onLogin }) {
           </form>
         )}
       </aside>
-    </div>
+  )
+
+  return page ? (
+    <section className="cart-page" aria-label="Shopping cart">
+      {drawer}
+    </section>
+  ) : (
+    <div className="overlay overlay-right" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>{drawer}</div>
   )
 }

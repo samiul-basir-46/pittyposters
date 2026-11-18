@@ -16,13 +16,13 @@ import SettingsAdmin from './SettingsAdmin'
 const SESSION_KEY = 'pp:admin-session'
 
 const NAV = [
-  { to: '#/admin', label: 'Dashboard', page: Dashboard },
-  { to: '#/admin/posters', label: 'Posters', page: PostersAdmin },
-  { to: '#/admin/categories', label: 'Categories', page: CategoriesAdmin },
-  { to: '#/admin/orders', label: 'Orders', page: OrdersAdmin },
-  { to: '#/admin/customers', label: 'Customers', page: CustomersAdmin },
-  { to: '#/admin/content', label: 'Site content', page: ContentAdmin },
-  { to: '#/admin/settings', label: 'Settings', page: SettingsAdmin },
+  { to: '/admin', label: 'Dashboard', page: Dashboard },
+  { to: '/admin/posters', label: 'Posters', page: PostersAdmin },
+  { to: '/admin/categories', label: 'Categories', page: CategoriesAdmin },
+  { to: '/admin/orders', label: 'Orders', page: OrdersAdmin },
+  { to: '/admin/customers', label: 'Customers', page: CustomersAdmin },
+  { to: '/admin/content', label: 'Site content', page: ContentAdmin },
+  { to: '/admin/settings', label: 'Settings', page: SettingsAdmin },
 ]
 
 function Login({ onDone }) {
@@ -83,7 +83,7 @@ function Login({ onDone }) {
         <button type="submit" className="a-btn primary full" disabled={busy}>
           {busy ? 'Checking…' : 'Log in'}
         </button>
-        <a className="a-link center" href="#/">
+        <a className="a-link center" href="/">
           ← Back to website
         </a>
       </form>
@@ -91,7 +91,7 @@ function Login({ onDone }) {
   )
 }
 
-export default function AdminApp({ hash }) {
+export default function AdminApp({ path }) {
   const { settings } = useData()
   const [authed, setAuthed] = useState(() => {
     try {
@@ -129,15 +129,23 @@ export default function AdminApp({ hash }) {
 
   if (!authed) return <Login onDone={() => setAuthed(true)} />
 
-  const path = hash.split('?')[0].replace(/\/$/, '')
-  const current = NAV.find((n) => n.to === path) || NAV[0]
+  const orderMatch = path.match(/^\/admin\/orders\/([^/]+)\/?$/)
+  const current = NAV.find((n) => n.to === path.replace(/\/$/, '')) || (orderMatch ? NAV.find((n) => n.to === '/admin/orders') : null) || NAV[0]
   const Page = current.page
+  let orderId = null
+  if (orderMatch) {
+    try {
+      orderId = decodeURIComponent(orderMatch[1])
+    } catch {
+      orderId = orderMatch[1]
+    }
+  }
 
   return (
     <NotifyContext.Provider value={notify}>
       <div className="adm">
         <aside className="adm-side">
-          <a href="#/admin" className="adm-brand">
+          <a href="/admin" className="adm-brand">
             <span className="adm-brand-logo">
               <HeartLogo size={24} />
             </span>
@@ -154,7 +162,7 @@ export default function AdminApp({ hash }) {
             ))}
           </nav>
           <div className="adm-side-foot">
-            <a href="#/" className="a-link">
+            <a href="/" className="a-link">
               View website ↗
             </a>
             <button type="button" className="a-link" onClick={logout}>
@@ -163,7 +171,7 @@ export default function AdminApp({ hash }) {
           </div>
         </aside>
         <main className="adm-main">
-          <Page />
+          <Page orderId={orderId} />
         </main>
         <div className={'a-toast' + (toast ? ' show ' + toast.kind : '')} role="status" aria-live="polite">
           {toast?.message}

@@ -1,121 +1,193 @@
 import { useState } from 'react'
 import { createOrder, deleteOrder, patchOrder, useData } from '../store/store'
 import { ORDER_STATUSES } from '../store/seed'
-import { money, waNumber } from '../utils'
+import { money, normPhone, waNumber } from '../utils'
+import PosterFace from '../components/PosterFace'
 import { Badge, Empty, Field, Modal, PageHead } from './ui'
 import { useNotify, useSaved } from './notify'
+import { createSteadfastConsignment } from './steadfastApi'
+import { dispatchOrder, hasShipment } from './dispatchFlow'
 
 const dateFmt = (iso) =>
   new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
-function OrderDetail({ id, onClose }) {
-  const { orders, settings } = useData()
+function OrderDetail({ id }) {
+  const { orders, settings, posters } = useData()
   const notify = useNotify()
   const saved = useSaved()
-  const o = orders.find((x) => x.id === id)
-  const [note, setNote] = useState(o?.adminNote || '')
-  if (!o) return null
-  const cur = settings.currency
-  const wa = waNumber(o.customer.phone)
-
-  const remove = () => {
-    if (window.confirm(`Delete order ${o.id}? This cannot be undone.`)) {
-      deleteOrder(o.id)
-      notify('Order deleted')
-      onClose()
+  const order = orders.find((item) => item.id === id)
+  const [note, setNote] = useState(order?.adminNote || '')
+  const [trackingLink, setTrackingLink] = useState(null)
+  const [dispatchForm, setDispatchForm] = useState(null)
+  const [dispatching, setDispatching] = useState(false)
+  const [dispatchError, setDispatchError] = useState('')
+  if (!order) return <Empty title="Order not found"><a href="/admin/orders">Back to all orders</a></Empty>
+  const wa = waNumber(order.customer.phone)
+  const quantity = order.items.reduce((total, item) => total + item.qty, 0)
+  const shipped = hasShipment(order)
+  const savedTrackingLink = trackingLink ?? order.trackingUrl ?? ''
+  const trackingUrl = /^https:\/\/(www\.)?steadfast\.com\.bd\//i.test(savedTrackingLink) ? savedTrackingLink : ''
+  const saveTrackingLink = () => {
+    const value = savedTrackingLink.trim()
+    if (value) {
+      try {
+        const url = new URL(value)
+        if (url.protocol !== 'https:' || !['steadfast.com.bd', 'www.steadfast.com.bd'].includes(url.hostname)) throw new Error()
+      } catch {
+        notify('Use the HTTPS tracking link from Steadfast.', 'error')
+        return
+      }
     }
+    saved(patchOrder(order.id, { trackingUrl: value }), 'Tracking link saved')
+  }
+  const openDispatch = () => {
+    setDispatchError('')
+    setDispatchForm({
+      recipient_name: order.customer.recipient || order.customer.name || '',
+      recipient_phone: normPhone(order.customer.deliveryPhone || order.customer.phone || ''),
+      alternative_phone: '',
+      recipient_address: order.customer.address || '',
+      cod_amount: String(Number(order.total) || 0),
+      item_description: order.items.map((item) => `${item.title}${item.size ? ` (${item.size})` : ''}`).join(', ').slice(0, 200),
+      note: '',
+    })
+  }
+  const submitDispatch = async (event) => {
+    event.preventDefault()
+    if (!dispatchForm || dispatching) return
+    setDispatching(true)
+    setDispatchError('')
+    try {
+      const result = await dispatchOrder({
+        order,
+        form: dispatchForm,
+        email: order.customer.email || '',
+        createConsignment: createSteadfastConsignment,
+        recordShipment: async (orderId, fields) => {
+          const ok = patchOrder(orderId, fields)
+          if (!ok) throw new Error('Could not save the shipment to browser storage.')
+        },
+      })
+      if (result.ok) {
+        setTrackingLink(result.fields.trackingUrl || '')
+        setDispatchForm(null)
+        notify('Steadfast shipment created. Tracking details are now saved to this order.')
+      } else {
+        setDispatchError(result.message)
+        if (result.stage !== 'courier') setDispatchForm(null)
+      }
+    } catch (error) {
+      setDispatchError(error instanceof Error ? error.message : 'Steadfast dispatch failed.')
+    } finally {
+      setDispatching(false)
+    }
+  }
+  const remove = () => {
+    if (!window.confirm(`Delete order ${order.id}? This cannot be undone.`)) return
+    saved(deleteOrder(order.id), 'Order deleted')
+    window.location.assign('/admin/orders')
   }
 
   return (
-    <Modal
-      title={`Order ${o.id}`}
-      onClose={onClose}
-      footer={
-        <>
-          <button type="button" className="a-btn danger" onClick={remove}>
-            Delete
-          </button>
-          <button type="button" className="a-btn primary" onClick={onClose}>
-            Done
-          </button>
-        </>
-      }
-    >
-      <div className="a-detail">
-        <div className="a-detail-top">
-          <span className="a-muted">
-            {dateFmt(o.createdAt)} · {o.source === 'manual' ? 'Added by hand' : 'From website'} · {o.userId ? 'Has account' : 'Guest'}
-          </span>
-          <select
-            aria-label="Order status"
-            value={o.status}
-            onChange={(e) => saved(patchOrder(o.id, { status: e.target.value }), 'Status updated')}
-          >
-            {ORDER_STATUSES.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-
-        <section>
-          <h3>Customer</h3>
-          <p>
-            <b>{o.customer.name}</b>
-          </p>
-          <p>{o.customer.address}</p>
-          <p className="a-contact">
-            <a className="a-btn sm" href={`tel:${o.customer.phone}`}>
-              Call {o.customer.phone}
-            </a>
-            {wa && (
-              <a className="a-btn sm" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer">
-                WhatsApp
-              </a>
-            )}
-          </p>
-          {o.note && (
-            <p className="a-note">
-              <b>Customer note:</b> {o.note}
-            </p>
-          )}
-        </section>
-
-        <section>
-          <h3>Items</h3>
-          <ul className="a-items">
-            {o.items.map((i, n) => (
-              <li key={n}>
-                <span>
-                  {i.title} <span className="a-muted">({i.size}) × {i.qty}</span>
-                </span>
-                <b>{money(i.price * i.qty, cur)}</b>
-              </li>
-            ))}
+    <div className="a-order-detail">
+      <PageHead title={`Order ${order.id}`} sub={`${dateFmt(order.createdAt)} · ${order.source === 'manual' ? 'Added by hand' : 'From website'} · ${order.userId ? 'Registered customer' : 'Guest checkout'}`}>
+        <a className="a-btn" href="/admin/orders">← All orders</a>
+      </PageHead>
+      <div className="a-order-layout">
+        <div className="a-order-primary">
+        <section className="a-card a-order-items-card">
+          <div className="a-card-head"><h2>Items ordered</h2><span>{quantity} {quantity === 1 ? 'item' : 'items'}</span></div>
+          <ul className="a-order-items">
+            {order.items.map((item, index) => {
+              const poster = posters.find((candidate) => candidate.id === item.posterId)
+              return (
+                <li className="a-order-item" key={`${item.posterId || item.title}-${index}`}>
+                  <div className="a-order-item-art">{poster ? <PosterFace p={poster} /> : <div className="a-order-missing">Poster<br />removed</div>}</div>
+                  <div className="a-order-item-info">
+                    <b>{item.title}</b>
+                    <span>{item.size} · Quantity {item.qty}</span>
+                    <small>{money(item.price, settings.currency)} each</small>
+                    {item.details && <div className="a-song-order"><b>Song:</b> {item.details.songName}<br /><b>Lyrics:</b> {item.details.lyrics}</div>}
+                  </div>
+                  <strong className="a-order-item-total">{money(item.price * item.qty, settings.currency)}</strong>
+                </li>
+              )
+            })}
           </ul>
-          <div className="a-sums">
-            <span>Subtotal</span>
-            <span>{money(o.subtotal, cur)}</span>
-            <span>Delivery</span>
-            <span>{money(o.delivery, cur)}</span>
-            <b>Total (cash on delivery)</b>
-            <b>{money(o.total, cur)}</b>
-          </div>
         </section>
-
-        <Field label="Your private note">
-          <textarea
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            onBlur={() => note !== (o.adminNote || '') && saved(patchOrder(o.id, { adminNote: note }), 'Note saved')}
-            placeholder="Only you can see this"
-          />
-        </Field>
+          <section className="a-card a-order-customer">
+            <div className="a-card-head"><h2>Customer</h2><span>{order.userId ? 'Account' : 'Guest'}</span></div>
+            <b>{order.customer.name}</b>
+            <p>{order.customer.phone}</p>
+            <p>{order.customer.address}</p>
+            <div className="a-contact">
+              <a className="a-btn sm" href={`tel:${order.customer.phone}`}>Call customer</a>
+              {wa && <a className="a-btn sm" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer">WhatsApp</a>}
+            </div>
+            {order.note && <p className="a-note"><b>Customer note:</b> {order.note}</p>}
+          </section>
+          <section className="a-card">
+            <div className="a-card-head"><h2>Payment summary</h2><span>Cash on delivery</span></div>
+            <div className="a-sums">
+              <span>Subtotal</span><span>{money(order.subtotal, settings.currency)}</span>
+              <span>Delivery</span><span>{money(order.delivery, settings.currency)}</span>
+              <b>Total due</b><b>{money(order.total, settings.currency)}</b>
+            </div>
+          </section>
+        </div>
+        <aside className="a-order-aside">
+          {shipped ? (
+            <section className="a-card a-shipment-card">
+              <div className="a-card-head"><h2>Steadfast shipment</h2><Badge status="shipped" /></div>
+              <p className="a-muted">Tracking code</p>
+              <b className="a-tracking-code">{order.trackingNumber || order.tracking_code || order.consignmentId}</b>
+              {order.consignmentId && <p className="a-muted">Consignment ID: {order.consignmentId}</p>}
+              {trackingUrl ? <a className="a-btn sm" href={trackingUrl} target="_blank" rel="noreferrer">Track parcel ↗</a> : <a className="a-btn sm" href="https://steadfast.com.bd/tracking" target="_blank" rel="noreferrer">Open Steadfast tracking ↗</a>}
+              <Field label="Steadfast tracking link">
+                <input type="url" placeholder="Paste the tracking link from the Steadfast SMS" value={savedTrackingLink} onChange={(event) => setTrackingLink(event.target.value)} />
+              </Field>
+              <button type="button" className="a-btn sm" onClick={saveTrackingLink}>Save tracking link</button>
+            </section>
+          ) : ['pending', 'confirmed'].includes(order.status) && (
+            <section className="a-card">
+              <div className="a-card-head"><h2>Courier dispatch</h2></div>
+              <p className="a-muted">Create a Steadfast consignment and save its tracking code to this order.</p>
+              <button type="button" className="a-btn primary full" onClick={openDispatch}>Dispatch with Steadfast</button>
+            </section>
+          )}
+          <section className="a-card">
+            <div className="a-card-head"><h2>Order status</h2><Badge status={order.status} /></div>
+            <select aria-label="Order status" value={order.status} onChange={(event) => saved(patchOrder(order.id, { status: event.target.value }), 'Status updated')}>
+              {ORDER_STATUSES.map((status) => <option key={status}>{status}</option>)}
+            </select>
+          </section>
+          <section className="a-card">
+            <Field label="Private note">
+              <textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} onBlur={() => note !== (order.adminNote || '') && saved(patchOrder(order.id, { adminNote: note }), 'Note saved')} placeholder="Only you can see this" />
+            </Field>
+          </section>
+          <button type="button" className="a-btn danger" onClick={remove}>Delete order</button>
+        </aside>
       </div>
-    </Modal>
+      {dispatchForm && <div className="a-overlay" onMouseDown={(event) => event.target === event.currentTarget && !dispatching && setDispatchForm(null)}>
+        <form className="a-modal lg a-dispatch-form" onSubmit={submitDispatch}>
+          <div className="a-modal-head"><h2>Steadfast dispatch</h2><button type="button" className="a-icon-btn" disabled={dispatching} aria-label="Close dispatch form" onClick={() => setDispatchForm(null)}>×</button></div>
+          <div className="a-modal-body">
+            <p className="a-muted">Order {order.id} · Review the recipient and parcel details before dispatch.</p>
+            <div className="a-dispatch-fields">
+              {[['recipient_name', 'Recipient name', 'text'], ['recipient_phone', 'Recipient phone', 'tel'], ['alternative_phone', 'Alternative phone (optional)', 'tel'], ['cod_amount', `Cash on delivery (${settings.currency})`, 'number'], ['item_description', 'Parcel description', 'text']].map(([key, label, type]) => <label className="a-field" key={key}><span className="a-label">{label}</span><input type={type} required={key !== 'alternative_phone'} min={type === 'number' ? '0' : undefined} step={type === 'number' ? '1' : undefined} value={dispatchForm[key]} onChange={(event) => setDispatchForm({ ...dispatchForm, [key]: event.target.value })} /></label>)}
+              <label className="a-field dispatch-address"><span className="a-label">Delivery address</span><textarea rows={3} required value={dispatchForm.recipient_address} onChange={(event) => setDispatchForm({ ...dispatchForm, recipient_address: event.target.value })} /></label>
+              <label className="a-field dispatch-address"><span className="a-label">Courier rider note (optional)</span><textarea rows={2} value={dispatchForm.note} onChange={(event) => setDispatchForm({ ...dispatchForm, note: event.target.value })} /></label>
+            </div>
+            <p className="a-note">This creates a real Steadfast shipment. The order will be marked shipped after the courier confirms it.</p>
+            {dispatchError && <p className="a-error" role="alert">{dispatchError}</p>}
+          </div>
+          <div className="a-modal-foot"><button type="button" className="a-btn" disabled={dispatching} onClick={() => setDispatchForm(null)}>Cancel</button><button type="submit" className="a-btn primary" disabled={dispatching}>{dispatching ? 'Dispatching…' : 'Confirm & dispatch'}</button></div>
+        </form>
+      </div>}
+    </div>
   )
 }
-
 function NewOrder({ onClose }) {
   const { posters, settings } = useData()
   const saved = useSaved()
@@ -261,12 +333,11 @@ function NewOrder({ onClose }) {
   )
 }
 
-export default function OrdersAdmin() {
-  const { orders, settings } = useData()
+export default function OrdersAdmin({ orderId }) {
+  const { orders, settings, posters } = useData()
   const saved = useSaved()
   const [tab, setTab] = useState('all')
   const [q, setQ] = useState('')
-  const [open, setOpen] = useState(null)
   const [adding, setAdding] = useState(false)
   const cur = settings.currency
 
@@ -276,6 +347,8 @@ export default function OrdersAdmin() {
       (tab === 'all' || o.status === tab) &&
       (!needle || o.id.toLowerCase().includes(needle) || o.customer.name.toLowerCase().includes(needle) || o.customer.phone.includes(needle)),
   )
+
+  if (orderId) return <OrderDetail id={orderId} />
 
   return (
     <>
@@ -303,36 +376,37 @@ export default function OrdersAdmin() {
           {orders.length ? 'Try another tab or search.' : 'Orders from the website and orders you add by hand will appear here.'}
         </Empty>
       ) : (
-        <ul className="a-rows">
-          {list.map((o) => (
-            <li key={o.id} className="a-orow">
-              <button type="button" className="a-orow-main" onClick={() => setOpen(o.id)}>
-                <span>
-                  <b>{o.id}</b> · {o.customer.name}
-                  <small>
-                    {dateFmt(o.createdAt)} · {o.items.reduce((n, i) => n + i.qty, 0)} item(s)
-                  </small>
-                </span>
-                <b>{money(o.total, cur)}</b>
-              </button>
-              <div className="a-orow-side">
-                <Badge status={o.status} />
-                <select
-                  aria-label={`Status of ${o.id}`}
-                  value={o.status}
-                  onChange={(e) => saved(patchOrder(o.id, { status: e.target.value }), 'Status updated')}
-                >
-                  {ORDER_STATUSES.map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="a-orders-list">
+          <div className="a-orders-list-head"><span>Order</span><span>Order total</span><span>Status</span></div>
+          <ul className="a-rows">
+            {list.map((o) => {
+              const firstItem = o.items[0]
+              const firstPoster = posters.find((poster) => poster.id === firstItem?.posterId)
+              const quantity = o.items.reduce((n, item) => n + item.qty, 0)
+              return (
+                <li key={o.id} className="a-orow">
+                  <a className="a-orow-main" href={`/admin/orders/${encodeURIComponent(o.id)}`}>
+                    <span className="a-orow-thumb">{firstPoster ? <PosterFace p={firstPoster} /> : <span>Poster</span>}</span>
+                    <span className="a-orow-info">
+                      <span className="a-orow-title"><b>{o.id}</b><span>{o.customer.name}</span></span>
+                      <small>{dateFmt(o.createdAt)} · {quantity} {quantity === 1 ? 'item' : 'items'} · {o.source === 'manual' ? 'Added manually' : 'Website order'}</small>
+                      <span className="a-orow-items">{o.items.slice(0, 2).map((item, index) => <span key={`${item.posterId || item.title}-${index}`}>{item.title} x {item.qty}</span>)}{o.items.length > 2 && <span>+{o.items.length - 2} more</span>}</span>
+                    </span>
+                  </a>
+                  <div className="a-orow-total"><small>Order total</small><b>{money(o.total, cur)}</b></div>
+                  <div className="a-orow-side">
+                    <select className={`a-order-status-select is-${o.status}`} aria-label={`Order status for ${o.id}`} value={o.status} onChange={(e) => saved(patchOrder(o.id, { status: e.target.value }), 'Status updated')}>
+                      {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                    </select>
+                    <a className="a-btn sm" href={`/admin/orders/${encodeURIComponent(o.id)}`}>View details</a>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
 
-      {open && <OrderDetail id={open} onClose={() => setOpen(null)} />}
       {adding && <NewOrder onClose={() => setAdding(false)} />}
     </>
   )

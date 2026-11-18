@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useCart, useUser } from '../store/store'
 import { CartIcon, CloseIcon, HeartLogo, MenuIcon, UserIcon } from './Icons'
+import { scrollToSection } from '../utils'
 
 const NAV_LINKS = [
-  { href: '#shop', label: 'Shop' },
-  { href: '#how', label: 'How it works' },
-  { href: '#about', label: 'About' },
-  { href: '#contact', label: 'Contact' },
+  { id: 'top', label: 'Home' },
+  { id: 'shop', label: 'Shop' },
+  { id: 'how', label: 'How it works' },
+  { id: 'about', label: 'About' },
+  { id: 'contact', label: 'Contact' },
 ]
 
-export default function Header({ onCart, onAccount }) {
+export default function Header({ onCart, onAccount, onHome }) {
   const [open, setOpen] = useState(false)
   const count = useCart().reduce((n, l) => n + l.qty, 0)
   const user = useUser()
@@ -28,7 +30,7 @@ export default function Header({ onCart, onAccount }) {
       <div className="container header-row">
         <nav className="nav-desktop" aria-label="Main navigation">
           {NAV_LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="nav-link">
+            <a key={l.id} href={l.id === 'top' ? '/' : `/${l.id}`} className="nav-link" onClick={(event) => { event.preventDefault(); l.id === 'top' ? onHome() : scrollToSection(l.id) }}>
               {l.label}
             </a>
           ))}
@@ -45,7 +47,7 @@ export default function Header({ onCart, onAccount }) {
           {open ? <CloseIcon /> : <MenuIcon />}
         </button>
 
-        <a href="#top" className="logo-badge" aria-label="Pitty Posters" data-magnetic>
+        <a href="/" className="logo-badge" aria-label="Pitty Posters home" onClick={(event) => { event.preventDefault(); onHome() }} data-magnetic>
           <HeartLogo />
         </a>
 
@@ -74,7 +76,7 @@ export default function Header({ onCart, onAccount }) {
         <div id="mobile-nav" className="mobile-nav">
           <nav aria-label="Mobile navigation">
             {NAV_LINKS.map((l) => (
-              <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
+              <a key={l.id} href={l.id === 'top' ? '/' : `/${l.id}`} onClick={(event) => { event.preventDefault(); setOpen(false); l.id === 'top' ? onHome() : scrollToSection(l.id) }}>
                 {l.label}
               </a>
             ))}

@@ -37,7 +37,7 @@ export default function Dashboard() {
 
       {!settings.passHash && (
         <div className="a-note warn">
-          You are still using the default password. <a href="#/admin/settings">Change it in Settings</a> before sharing this site.
+          You are still using the default password. <a href="/admin/settings">Change it in Settings</a> before sharing this site.
         </div>
       )}
 
@@ -61,7 +61,7 @@ export default function Dashboard() {
           <span>Customers</span>
           <b>{users.length}</b>
           <small>
-            <a href="#/admin/customers">View all</a>
+          <a href="/admin/customers">View all</a>
           </small>
         </div>
       </div>
@@ -70,7 +70,7 @@ export default function Dashboard() {
         <section className="a-card">
           <div className="a-card-head">
             <h2>Recent orders</h2>
-            <a className="a-link" href="#/admin/orders">
+            <a className="a-link" href="/admin/orders">
               See all
             </a>
           </div>
@@ -80,7 +80,7 @@ export default function Dashboard() {
             <ul className="a-list">
               {orders.slice(0, 6).map((o) => (
                 <li key={o.id}>
-                  <a href="#/admin/orders" className="a-list-row">
+                  <a href="/admin/orders" className="a-list-row">
                     <span>
                       <b>{o.id}</b> · {o.customer.name}
                       <small>{dateFmt(o.createdAt)}</small>
@@ -134,7 +134,7 @@ export default function Dashboard() {
         <section className="a-card">
           <div className="a-card-head">
             <h2>Needs attention</h2>
-            <a className="a-link" href="#/admin/posters">
+            <a className="a-link" href="/admin/posters">
               Posters
             </a>
           </div>
@@ -154,7 +154,7 @@ export default function Dashboard() {
       </div>
 
       <p className="a-footnote">
-        Your data is saved in this browser. Download a backup now and then from <a href="#/admin/settings">Settings</a>.
+        Your data is saved in this browser. Download a backup now and then from <a href="/admin/settings">Settings</a>.
       </p>
     </>
   )

@@ -1,5 +1,16 @@
 export const uid = () => Math.random().toString(36).slice(2, 9)
 
+export function scrollToSection(id) {
+  const section = document.getElementById(id)
+  if (!section) return
+  const target = id === 'top' ? '/' : `/${id}`
+  if (window.location.pathname !== target) {
+    window.history.pushState({}, '', target)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 export const money = (n, currency = '৳') => `${currency}${Number(n || 0).toLocaleString('en-US')}`
 
 export async function sha256(text) {

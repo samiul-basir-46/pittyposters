@@ -25,11 +25,9 @@ export default function FX() {
     const cleanups = []
 
     // ---------- scroll reveal ----------
-    const revealEls = document.querySelectorAll('.reveal')
-    if (reduce || !('IntersectionObserver' in window)) {
-      revealEls.forEach((el) => el.classList.add('in'))
-    } else {
-      const io = new IntersectionObserver(
+    const canObserve = !reduce && 'IntersectionObserver' in window
+    const io = canObserve
+      ? new IntersectionObserver(
         (entries) => {
           entries.forEach((en) => {
             if (en.isIntersecting) {
@@ -40,9 +38,25 @@ export default function FX() {
         },
         { threshold: 0.12, rootMargin: '0px 0px -6% 0px' },
       )
-      revealEls.forEach((el) => io.observe(el))
-      cleanups.push(() => io.disconnect())
+      : null
+    const observeReveals = (node) => {
+      if (!(node instanceof Element)) return
+      if (node.matches('.reveal')) {
+        if (io) io.observe(node)
+        else node.classList.add('in')
+      }
+      node.querySelectorAll('.reveal').forEach((el) => {
+        if (io) io.observe(el)
+        else el.classList.add('in')
+      })
     }
+    observeReveals(document.body)
+    const revealMutations = new MutationObserver((records) => {
+      records.forEach((record) => record.addedNodes.forEach(observeReveals))
+    })
+    revealMutations.observe(document.body, { childList: true, subtree: true })
+    cleanups.push(() => revealMutations.disconnect())
+    if (io) cleanups.push(() => io.disconnect())
 
     if (reduce || !fine) return () => cleanups.forEach((fn) => fn())
 

@@ -7,31 +7,32 @@ import { CloseIcon } from './Icons'
 export default function ProductModal({ poster, currency, onClose, onAdded }) {
   const [size, setSize] = useState(poster.sizes[0]?.label)
   const [qty, setQty] = useState(1)
+  const [songName, setSongName] = useState('')
+  const [lyrics, setLyrics] = useState('')
+  const songBook = poster.productType === 'songbook'
   const closeRef = useRef(null)
   const sold = poster.status === 'soldout'
   const price = Number(poster.sizes.find((s) => s.label === size)?.price) || 0
 
   useEffect(() => {
-    const prev = document.documentElement.style.overflow
-    document.documentElement.style.overflow = 'hidden'
     closeRef.current?.focus()
     const onKey = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => {
-      document.documentElement.style.overflow = prev
       window.removeEventListener('keydown', onKey)
     }
   }, [onClose])
 
   const add = () => {
-    addToCart(poster.id, size, qty)
+    if (songBook && (!songName.trim() || !lyrics.trim())) return
+    addToCart(poster.id, size, qty, songBook ? { songName: songName.trim(), lyrics: lyrics.trim() } : null)
     onAdded(`${poster.title} (${size}) added to cart`)
-    onClose()
   }
 
   return (
-    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal product-modal" role="dialog" aria-modal="true" aria-label={poster.title}>
+    <section className="product-page" aria-label={`${poster.title} details`}>
+      <button type="button" className="btn btn-outline product-back" onClick={onClose}>Back to posters</button>
+      <div className="product-modal product-page-card">
         <button ref={closeRef} type="button" className="modal-x" aria-label="Close" onClick={onClose}>
           <CloseIcon />
         </button>
@@ -43,6 +44,20 @@ export default function ProductModal({ poster, currency, onClose, onAdded }) {
           <h3 className="pm-title">{poster.title}</h3>
           <p className="pm-price">{money(price, currency)}</p>
           {poster.desc && <p className="pm-desc">{poster.desc}</p>}
+
+          {songBook && (
+            <div className="pm-song-fields">
+              <label className="f">
+                <span>Song name</span>
+                <input value={songName} onChange={(e) => setSongName(e.target.value)} placeholder="Enter the song name" required />
+              </label>
+              <label className="f">
+                <span>Song lyrics</span>
+                <textarea value={lyrics} onChange={(e) => setLyrics(e.target.value)} rows={7} placeholder="Paste or write the lyrics here" required />
+              </label>
+              <p className="pm-hint">Recommended: 60–80 words. No word limit.</p>
+            </div>
+          )}
 
           <p className="pm-label">Size</p>
           <div className="pm-sizes" role="group" aria-label="Choose size">
@@ -70,11 +85,11 @@ export default function ProductModal({ poster, currency, onClose, onAdded }) {
             </button>
           </div>
 
-          <button type="button" className="btn btn-solid pm-add" disabled={sold} onClick={add} data-magnetic={sold ? undefined : ''}>
+          <button type="button" className="btn btn-solid pm-add" disabled={sold || (songBook && (!songName.trim() || !lyrics.trim()))} onClick={add} data-magnetic={sold ? undefined : ''}>
             {sold ? 'Sold out' : `Add to cart · ${money(price * qty, currency)}`}
           </button>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

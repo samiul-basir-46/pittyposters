@@ -1,5 +1,6 @@
 import { useData } from '../store/store'
 import { ArrowIcon } from './Icons'
+import { scrollToSection } from '../utils'
 
 export default function Hero() {
   const { content: c } = useData()
@@ -48,10 +49,10 @@ export default function Hero() {
               {c.heroQuote}
             </p>
             <div className="hero-actions pp-up" style={{ animationDelay: '2.85s' }}>
-              <a href="#shop" className="btn btn-light" data-magnetic>
+              <a href="/" onClick={(event) => { event.preventDefault(); scrollToSection('shop') }} className="btn btn-light" data-magnetic>
                 {c.heroCta1} <ArrowIcon />
               </a>
-              <a href="#how" className="btn btn-ghost" data-magnetic>
+              <a href="/" onClick={(event) => { event.preventDefault(); scrollToSection('how') }} className="btn btn-ghost" data-magnetic>
                 {c.heroCta2}
               </a>
             </div>

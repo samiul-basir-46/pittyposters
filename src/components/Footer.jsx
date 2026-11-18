@@ -1,5 +1,6 @@
 import { useData } from '../store/store'
 import { waNumber } from '../utils'
+import { scrollToSection } from '../utils'
 
 const YEAR = new Date().getFullYear()
 
@@ -18,13 +19,13 @@ export default function Footer() {
           <p className="footer-head">Explore</p>
           <ul>
             <li>
-              <a href="#shop">Shop</a>
+              <a href="/" onClick={(event) => { event.preventDefault(); scrollToSection('shop') }}>Shop</a>
             </li>
             <li>
-              <a href="#how">How it works</a>
+              <a href="/" onClick={(event) => { event.preventDefault(); scrollToSection('how') }}>How it works</a>
             </li>
             <li>
-              <a href="#about">About</a>
+              <a href="/" onClick={(event) => { event.preventDefault(); scrollToSection('about') }}>About</a>
             </li>
           </ul>
         </div>
