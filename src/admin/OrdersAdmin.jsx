@@ -350,6 +350,15 @@ export default function OrdersAdmin({ orderId }) {
 
   if (orderId) return <OrderDetail id={orderId} />
 
+  const countBy = (status) => orders.filter((o) => o.status === status).length
+  const revenue = orders.filter((o) => o.status !== 'cancelled').reduce((sum, o) => sum + (Number(o.total) || 0), 0)
+  const stats = [
+    { label: 'Total orders', value: orders.length, hint: 'All time' },
+    { label: 'Needs action', value: countBy('pending'), hint: 'Pending confirmation', tone: 'warn' },
+    { label: 'In transit', value: countBy('confirmed') + countBy('shipped'), hint: 'Confirmed or shipped' },
+    { label: 'Revenue', value: money(revenue, cur), hint: 'Excluding cancelled', tone: 'ok' },
+  ]
+
   return (
     <>
       <PageHead title="Orders" sub={`${orders.length} order${orders.length === 1 ? '' : 's'} so far.`}>
@@ -357,6 +366,16 @@ export default function OrdersAdmin({ orderId }) {
           + New order
         </button>
       </PageHead>
+
+      <div className="a-ostats">
+        {stats.map((s) => (
+          <div key={s.label} className={`a-ostat${s.tone ? ` is-${s.tone}` : ''}`}>
+            <span>{s.label}</span>
+            <b>{s.value}</b>
+            <small>{s.hint}</small>
+          </div>
+        ))}
+      </div>
 
       <div className="a-tabs" role="tablist">
         {['all', ...ORDER_STATUSES].map((s) => (
@@ -380,25 +399,43 @@ export default function OrdersAdmin({ orderId }) {
           <div className="a-orders-list-head"><span>Order</span><span>Order total</span><span>Status</span></div>
           <ul className="a-rows">
             {list.map((o) => {
-              const firstItem = o.items[0]
-              const firstPoster = posters.find((poster) => poster.id === firstItem?.posterId)
               const quantity = o.items.reduce((n, item) => n + item.qty, 0)
+              const href = `/admin/orders/${encodeURIComponent(o.id)}`
+              const thumbs = o.items.slice(0, 3).map((item) => posters.find((poster) => poster.id === item.posterId))
+              const extraThumbs = o.items.length - thumbs.length
               return (
-                <li key={o.id} className="a-orow">
-                  <a className="a-orow-main" href={`/admin/orders/${encodeURIComponent(o.id)}`}>
-                    <span className="a-orow-thumb">{firstPoster ? <PosterFace p={firstPoster} /> : <span>Poster</span>}</span>
+                <li key={o.id} className={`a-orow is-${o.status}`}>
+                  <a className="a-orow-main" href={href}>
+                    <span className="a-orow-thumbs" aria-hidden="true">
+                      {thumbs.map((poster, index) => (
+                        <span className="a-orow-thumb" key={index} style={{ zIndex: thumbs.length - index }}>
+                          {poster ? <PosterFace p={poster} /> : <span>Poster</span>}
+                        </span>
+                      ))}
+                      {extraThumbs > 0 && <span className="a-orow-more">+{extraThumbs}</span>}
+                    </span>
                     <span className="a-orow-info">
-                      <span className="a-orow-title"><b>{o.id}</b><span>{o.customer.name}</span></span>
-                      <small>{dateFmt(o.createdAt)} · {quantity} {quantity === 1 ? 'item' : 'items'} · {o.source === 'manual' ? 'Added manually' : 'Website order'}</small>
-                      <span className="a-orow-items">{o.items.slice(0, 2).map((item, index) => <span key={`${item.posterId || item.title}-${index}`}>{item.title} x {item.qty}</span>)}{o.items.length > 2 && <span>+{o.items.length - 2} more</span>}</span>
+                      <span className="a-orow-title">
+                        <b>{o.id}</b>
+                        <span className="a-orow-source">{o.source === 'manual' ? 'Manual' : 'Website'}</span>
+                      </span>
+                      <span className="a-orow-customer">
+                        <strong>{o.customer.name}</strong>
+                        {o.customer.phone && <span>{o.customer.phone}</span>}
+                      </span>
+                      <small>{dateFmt(o.createdAt)} · {quantity} {quantity === 1 ? 'item' : 'items'}</small>
+                      <span className="a-orow-items">
+                        {o.items.slice(0, 2).map((item, index) => <span key={`${item.posterId || item.title}-${index}`}>{item.title} × {item.qty}</span>)}
+                        {o.items.length > 2 && <span>+{o.items.length - 2} more</span>}
+                      </span>
                     </span>
                   </a>
-                  <div className="a-orow-total"><small>Order total</small><b>{money(o.total, cur)}</b></div>
+                  <div className="a-orow-total"><small>Order total</small><b>{money(o.total, cur)}</b><em>Cash on delivery</em></div>
                   <div className="a-orow-side">
                     <select className={`a-order-status-select is-${o.status}`} aria-label={`Order status for ${o.id}`} value={o.status} onChange={(e) => saved(patchOrder(o.id, { status: e.target.value }), 'Status updated')}>
                       {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                     </select>
-                    <a className="a-btn sm" href={`/admin/orders/${encodeURIComponent(o.id)}`}>View details</a>
+                    <a className="a-btn sm" href={href}>View details</a>
                   </div>
                 </li>
               )
